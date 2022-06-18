@@ -1,30 +1,36 @@
 #include "../include/read_write_ppm.h"
 #include "../include/compress.h"
 
-template <typename A>
-size_t get_max(A *arr, size_t size) {
-    size_t max_ix = 0;
+#include <unordered_map>
 
-    for(size_t i = 0; i < size; i++) {
-        if(arr[i] > arr[max_ix]) {
-            max_ix = i;
+using namespace std;
+
+template <typename T>
+T get_max(unordered_map<T, int> lut) {
+    int max = 0;
+    T max_val = T();
+
+    for(pair<T, int> i : lut) {
+        if(i.second > max) {
+            max_val = i.first;
         }
     }
 
-    return max_ix;
+    return max_val;
 }
 
 RGB get_mode(quadtree_t **arr) {
-    pixel_t lut[BRANCHES_N];
+    unordered_map<pixel_t, int> lut;
+
     int n = BRANCHES_N;
 
     for(int i = 0; i < n; i++) {
         lut[arr[i]->avg]++;
     }
 
-    size_t max_ix = get_max<pixel_t>(lut, BRANCHES_N);
+    pixel_t most_common_px = get_max<pixel_t>(lut);
 
-    return rgb_from_pixel(lut[max_ix]);
+    return rgb_from_pixel(most_common_px);
 }
 
 RGB get_average(quadtree_t **arr) {

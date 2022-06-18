@@ -47,7 +47,7 @@ image_t read_ppm(string filepath) {
 
         while(fgets(buff, PX_DATA_STRLEN - 1, file)) {
             stringstream rgb(buff);
-            cout << rgb.str() << endl;
+            //cout << rgb.str() << endl;
 
             rgb >> r >> g >> b;
 

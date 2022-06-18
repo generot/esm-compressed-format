@@ -13,4 +13,6 @@ struct quadtree_t {
     quadtree_t *branches[BRANCHES_N];
 };
 
+quadtree_t *compress_img(image_t img_data, int x, int y, int width, int height);
+
 #endif //__COMPRESS_H__
