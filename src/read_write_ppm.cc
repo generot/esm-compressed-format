@@ -10,6 +10,14 @@ pixel_t pixel_from_rgb(byte_t r, byte_t g, byte_t b) {
     return (r_field << 16) | (g_field << 8) | b_field;
 }
 
+pixel_t pixel_from_rgb(RGB rgb) {
+    pixel_t r_field = (pixel_t)rgb.r;
+    pixel_t g_field = (pixel_t)rgb.g;
+    pixel_t b_field = (pixel_t)rgb.b;
+
+    return (r_field << 16) | (g_field << 8) | b_field;
+}
+
 RGB rgb_from_pixel(pixel_t px) {
     pixel_t r_field = (px >> 16) & 0xff;
     pixel_t g_field = (px >> 8)  & 0xff;

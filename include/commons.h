@@ -16,12 +16,24 @@ struct image_t {
     int height;
 
     std::vector<pixel_t> pixel_data;
+
+    pixel_t index_2d(int x, int y) {
+        return pixel_data[x + y * width];
+    }
 };
 
 struct RGB {
     byte_t r;
     byte_t g;
     byte_t b;
+
+    RGB operator-(const RGB& other) {
+        return RGB{ (byte_t)(r - other.r), (byte_t)(g - other.g), (byte_t)(b - other.b) };
+    }
+
+    bool operator<(int rhs) {
+        return r < rhs && g < rhs && b < rhs;
+    }
 };
 
 #endif //__COMMONS_H__
