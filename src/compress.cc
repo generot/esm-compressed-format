@@ -33,6 +33,7 @@ RGB get_mode(quadtree_t **arr) {
     return rgb_from_pixel(most_common_px);
 }
 
+//DEPRECATED
 RGB get_average(quadtree_t **arr) {
     int n = BRANCHES_N;
 
@@ -50,28 +51,46 @@ RGB get_average(quadtree_t **arr) {
 
     return RGB{ (byte_t)(avg_r / n), (byte_t)(avg_g / n), (byte_t)(avg_b / n) };
 }
+//DEPRECATED
 
 quadtree_t *compress_img(image_t img_data, int x, int y, int width, int height) {
     quadtree_t *root = new quadtree_t{0};
 
-    if(width == 1 && height == 1) {
+    if(width <= 1 && height <= 1) {
         pixel_t px = img_data.index_2d(x, y);
+
+        //cout << "(X: " << x << "; Y: " << y  << ";)"  << " -> " << px << endl;
 
         root->mode = px;
         root->avg = px;
 
+        root->sum = root->sum + rgb_from_pixel(px);
+
         return root;
     }
 
-    root->branches[0] = compress_img(img_data, x, y, width / 2, height / 2);
-    root->branches[1] = compress_img(img_data, x + width / 2, y, width / 2, height / 2);
-    root->branches[2] = compress_img(img_data, x, y + height / 2, width / 2, height / 2);
-    root->branches[3] = compress_img(img_data, x + width / 2, y + height / 2, width / 2, height / 2);
+    int half_w = width / 2;
+    int half_h = height / 2;
 
-    RGB avg = get_average(root->branches);
+    root->branches[0] = compress_img(img_data, x, y, half_w, half_h);
+    root->branches[1] = compress_img(img_data, x + half_w, y, half_w, half_h);
+    root->branches[2] = compress_img(img_data, x, y + half_h, half_w, half_h);
+    root->branches[3] = compress_img(img_data, x + half_w, y + half_h, half_w, half_h);
+
+    for(int i = 0; i < BRANCHES_N; i++) {
+        root->sum = root->sum + root->branches[i]->sum;
+    }
+
+    RGB64 avg = root->sum / (pixel64_t)(width * height);
+
+    RGB avg8 = avg.from_64_to_8();
     RGB mode = get_mode(root->branches);
 
-    if(mode - avg < BASE_CMPR_FACTOR) {
+    // cout << "Average: " << (int)avg8.r << " " << (int)avg8.g << " " << (int)avg8.b << endl;
+    // cout << "Mode: " << (int)mode.r << " " << (int)mode.g << " " << (int)mode.b << endl;
+
+    if(mode - avg8 < BASE_CMPR_FACTOR) {
+        cout << "In compression..." << endl;
         root->avg = pixel_from_rgb(mode);
 
         for(int i = 0; i < BRANCHES_N; i++) {

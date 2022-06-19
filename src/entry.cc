@@ -1,36 +1,52 @@
 #include "../include/compress.h"
 #include "../include/allocator.h"
 #include "../include/read_write_ppm.h"
+#include "../include/treeops.h"
 
 using namespace std;
 
-void traverse_tree(quadtree_t *root) {
-    if(!root) return;
+void write_esm_file(quadtree_t *compressed_img, pixel64_t width, pixel64_t height, string filepath) {
+    FILE *f = fopen(filepath.c_str(), "wb+");
 
-    cout << "Average: " << root->avg << endl;
+    pixel64_t dims = (width << 32) | height;
+    fwrite(&dims, sizeof(pixel64_t), 1, f);
 
-    for(int ix = 0; ix < BRANCHES_N; ix++) {
-        traverse_tree(root->branches[ix]);
-    }
+    bft_callback func = [=](quadtree_t *node) -> void {
+        fwrite(&node->avg, sizeof(pixel_t), 1, f);
+    };
+
+    breadth_first_traversal(compressed_img, func);
+
+    fclose(f);
+}
+
+string change_ext(string path, string new_ext) {
+    size_t ix = path.find('.');
+    string new_path = path.substr(0, ix) + "." + new_ext;
+
+    return new_path;
 }
 
 int main(int argc, char **argv) {
     if(argc < 2) {
+        cerr << "Usage: ./esm <image_to_compress.ppm>" << endl;
         return -1;
     }
 
-    image_t img = read_ppm(string(argv[1]));
+    string filepath = string(argv[1]);
+    image_t img = read_ppm(filepath);
+
+    if(img.width >= MAX_X || img.height >= MAX_Y) {
+        cerr << "Input image exceeds dimensional limit (6000 x 6000)." << endl;
+        return -1;
+    }
+
+    cout << "Image size: " << img.width << " x " << img.height << endl;
+
+    string outpath = change_ext(filepath, "esm");
     quadtree_t *compressed_img = compress_img(img, 0, 0, img.width, img.height);
 
-    traverse_tree(compressed_img);
-
-    // for(int i = 0; i < img.height; i++) {
-    //     for(int j = 0; j < img.width; j++) {
-    //         RGB px = rgb_from_pixel(img.pixel_data[j + i * img.width]);
-
-    //         std::cout << (int)px.r << " " << (int)px.g << " " << (int)px.b << std::endl;
-    //     }
-    // }
+    write_esm_file(compressed_img, img.width, img.height, outpath);
 
     return 0;
 }

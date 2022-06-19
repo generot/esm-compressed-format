@@ -3,12 +3,14 @@
 
 #include "commons.h"
 
-#define BASE_CMPR_FACTOR 10
+#define BASE_CMPR_FACTOR 100
 #define BRANCHES_N 4
 
 struct quadtree_t {
     pixel_t mode;
     pixel_t avg;
+
+    RGB64 sum;
 
     quadtree_t *branches[BRANCHES_N];
 };
