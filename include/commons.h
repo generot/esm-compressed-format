@@ -8,15 +8,25 @@
 #define MAX_X 6000
 #define MAX_Y MAX_X
 
+#define HIGH32_64(x) ((x) >> 32)
+#define LOW32_64(x) ((x) & 0xffffffff)
+
 using pixel_t = unsigned int;
 using pixel64_t = unsigned long long int;
 using byte_t = unsigned char;
+
+struct esm_t {
+    std::vector<pixel_t> px_data;
+
+    int width;
+    int height;
+};
 
 struct image_t {
     int width;
     int height;
 
-    std::vector<pixel_t> pixel_data;
+    pixel_t *pixel_data;
 
     pixel_t index_2d(int x, int y) {
         return pixel_data[x + y * width];
@@ -30,8 +40,24 @@ struct RGB {
         return RGB{ (byte_t)(r - other.r), (byte_t)(g - other.g), (byte_t)(b - other.b) };
     }
 
+    RGB operator+(const RGB& other) {
+        return RGB{ (byte_t)(r + other.r), (byte_t)(g + other.g), (byte_t)(b + other.b) };
+    }
+
+    RGB operator*(const RGB& other) {
+        return RGB{ (byte_t)(r * other.r), (byte_t)(g * other.g), (byte_t)(b * other.b) };
+    }
+
+    RGB operator/(byte_t div) {
+        return RGB{ (byte_t)(r / div), (byte_t)(g / div), (byte_t)(b / div) };
+    }
+
     bool operator<(int rhs) {
         return r < rhs && g < rhs && b < rhs;
+    }
+
+    bool operator>(int rhs) {
+        return r > rhs && g > rhs && b > rhs;
     }
 };
 

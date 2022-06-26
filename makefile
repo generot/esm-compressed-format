@@ -20,9 +20,12 @@ $(BIN)/esm: $(OBJ)
 endif
 
 $(SRC)/%.o: $(SRC)/%.cc $(INCLUDE)
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $< -O3
 
-.PHONY: clean
+.PHONY: clean rmobj
+
+rmobj:
+	rm $(SRC)/*.o
 
 clean:
 	rm $(BIN)/esm*

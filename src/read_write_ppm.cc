@@ -26,9 +26,37 @@ RGB rgb_from_pixel(pixel_t px) {
     return RGB{ (byte_t)r_field, (byte_t)g_field, (byte_t)b_field };
 }
 
+void write_ppm(string filepath, vector<pixel_t> pixel_data, int width, int height, int max_px) {
+    FILE *file = fopen(filepath.c_str(), "wb");
+
+    fprintf(file, "P6\n%d %d\n%d\n", width, height, max_px);
+    
+    size_t image_buflen = 3 * width * height;
+    size_t ix = 0;
+
+    byte_t *image = new byte_t[image_buflen]{0};
+
+    for(size_t i = 0; i < pixel_data.size(); i++) {
+        RGB px = rgb_from_pixel(pixel_data[i]);
+
+        image[ix + 0] = px.r;
+        image[ix + 1] = px.g;
+        image[ix + 2] = px.b;
+
+        ix += 3;
+    }
+
+    fwrite(image, sizeof(byte_t), image_buflen, file);
+    fclose(file);
+
+    delete[] image;
+}
+
 image_t read_ppm(string filepath) {
     FILE *file = fopen(filepath.c_str(), "rb");
-    vector<pixel_t> pixel_data;
+
+    pixel_t *pixel_data = NULL;
+    size_t ix = 0;
 
     int r, g, b;
 
@@ -39,8 +67,10 @@ image_t read_ppm(string filepath) {
     int max_pxval = 0;
 
     fscanf(file, "%s\n%d %d\n%d\n", mode, &width, &height, &max_pxval);
+    cout << width << " " << height << endl;
 
     string modestr(mode);
+    pixel_data = new pixel_t[width * height];
 
     if(modestr == "P3") {
         char buff[PX_DATA_STRLEN] = {0};
@@ -51,7 +81,7 @@ image_t read_ppm(string filepath) {
 
             rgb >> r >> g >> b;
 
-            pixel_data.push_back(pixel_from_rgb(r, g, b));
+            pixel_data[ix++] = pixel_from_rgb(r, g, b);
         }
     } else if(modestr == "P6") {
         size_t sz = width * height * 3;
@@ -64,7 +94,7 @@ image_t read_ppm(string filepath) {
             g = data[i + 1];
             b = data[i + 2];
 
-            pixel_data.push_back(pixel_from_rgb(r, g, b));
+            pixel_data[ix++] = pixel_from_rgb(r, g, b);
         }
     }
 

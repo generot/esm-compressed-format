@@ -1,104 +1,95 @@
 #include "../include/read_write_ppm.h"
 #include "../include/compress.h"
 
-#include <unordered_map>
-
 using namespace std;
 
-template <typename T>
-T get_max(unordered_map<T, int> lut) {
-    int max = 0;
-    T max_val = T();
+RGB rgb_abs(RGB px) {
+    return RGB{ (byte_t)abs(px.r), (byte_t)abs(px.g), (byte_t)abs(px.b) };
+}
 
-    for(pair<T, int> i : lut) {
-        if(i.second > max) {
-            max_val = i.first;
+RGB average_for_region(pixel_t *data, int x, int y, int width, int height, int org_w) {
+    RGB64 sum = {0};
+
+    for(int i = y; i < y + height; i++) {
+        for(int j = x; j < x + width; j++) {
+            sum = sum + rgb_from_pixel(data[j + i * org_w]);
         }
     }
 
-    return max_val;
+    RGB64 avg = sum / (pixel64_t)(width * height);
+
+    return avg.from_64_to_8();
 }
 
-RGB get_mode(quadtree_t **arr) {
-    unordered_map<pixel_t, int> lut;
+pixel_t mean_squared_error(pixel_t *data, int x, int y, int width, int height, int org_w, RGB forecast) {
+    pixel_t mean = 0;
 
-    int n = BRANCHES_N;
+    for(int i = y; i < y + height; i++) {
+        for(int j = x; j < x + width; j++) {
+            RGB curr_px = rgb_from_pixel(data[j + i * org_w]);
 
-    for(int i = 0; i < n; i++) {
-        lut[arr[i]->avg]++;
+            pixel_t r_sq = (forecast.r - curr_px.r) * (forecast.r - curr_px.r);
+            pixel_t g_sq = (forecast.g - curr_px.g) * (forecast.g - curr_px.g);
+            pixel_t b_sq = (forecast.b - curr_px.b) * (forecast.b - curr_px.b);
+
+            mean = mean + r_sq + g_sq + b_sq;
+        }
     }
 
-    pixel_t most_common_px = get_max<pixel_t>(lut);
-
-    return rgb_from_pixel(most_common_px);
+    return mean / (3 * width * height);
 }
 
-//DEPRECATED
-RGB get_average(quadtree_t **arr) {
-    int n = BRANCHES_N;
+vector<pixel_t> decompress_img2(quadtree_node_t *regions, size_t sz, int width, int height) {
+    pixel_t *arr = new pixel_t[width * height]{0};
 
-    int avg_r = 0;
-    int avg_b = 0;
-    int avg_g = 0;
+    for(size_t i = 0; i < sz; i++) {
+        quadtree_node_t curr_region = regions[i];
+        quadrant_t coords = partition_64(curr_region.region);
 
-    for(int i = 0; i < n; i++) {
-        RGB px = rgb_from_pixel(arr[i]->avg);
+        // cout << "------ITER------" << endl;
+        // printf("(%hu, %hu, %hu, %hu)\n", coords.x, coords.y, coords.width, coords.height);
 
-        avg_r += px.r;
-        avg_g += px.g;
-        avg_b += px.b;
+        //TVA TRJABVA DA E RELATIVNO NA CJALATA MATRICA, NE SAMO NA EDIN REGION!!!!
+
+        for(short i = coords.y; i < coords.y + coords.height; i++) {
+            for(short j = coords.x; j < coords.x + coords.width; j++) {
+                int ix = (int)j + (int)i * width;
+
+                arr[ix] = curr_region.avg;
+                //printf("(%hu, %hu) -> %hu\n", j, i, ix);
+
+            }    
+        }
     }
 
-    return RGB{ (byte_t)(avg_r / n), (byte_t)(avg_g / n), (byte_t)(avg_b / n) };
+    vector<pixel_t> managed_mem = vector<pixel_t>(arr, arr + width * height);
+    delete[] arr;
+
+    return managed_mem;
 }
-//DEPRECATED
 
-quadtree_t *compress_img(image_t img_data, int x, int y, int width, int height) {
-    quadtree_t *root = new quadtree_t{0};
-
-    if(width <= 1 && height <= 1) {
-        pixel_t px = img_data.index_2d(x, y);
-
-        //cout << "(X: " << x << "; Y: " << y  << ";)"  << " -> " << px << endl;
-
-        root->mode = px;
-        root->avg = px;
-
-        root->sum = root->sum + rgb_from_pixel(px);
-
-        return root;
-    }
-
+//TUKA TRJABVA DA PAZIM I ORIGINALNITE RAZMERI!!!
+quadtree_t *compress_img2(image_t img_data, int x, int y, int width, int height, int threshold) {
     int half_w = width / 2;
     int half_h = height / 2;
 
-    root->branches[0] = compress_img(img_data, x, y, half_w, half_h);
-    root->branches[1] = compress_img(img_data, x + half_w, y, half_w, half_h);
-    root->branches[2] = compress_img(img_data, x, y + half_h, half_w, half_h);
-    root->branches[3] = compress_img(img_data, x + half_w, y + half_h, half_w, half_h);
+    quadtree_t *new_node = new quadtree_t{0};
+    // RGB curr_region = parent_region_avg;
+    RGB curr_region = average_for_region(img_data.pixel_data, x, y, width, height, img_data.width);
+    pixel_t mean_sq_err = mean_squared_error(img_data.pixel_data, x, y, width, height, img_data.width, curr_region);
 
-    for(int i = 0; i < BRANCHES_N; i++) {
-        root->sum = root->sum + root->branches[i]->sum;
+    new_node->avg = pixel_from_rgb(curr_region);
+    new_node->region = combine_into_64(x, y, width, height);
+    
+    if(mean_sq_err > threshold) {
+        //cout << "Region is not divisible" << endl;
+        new_node->branches[0] = compress_img2(img_data, x, y, half_w, half_h, threshold);
+        new_node->branches[1] = compress_img2(img_data, x + half_w, y, half_w, half_h, threshold);
+        new_node->branches[2] = compress_img2(img_data, x, y + half_h, half_w, half_h, threshold);
+        new_node->branches[3] = compress_img2(img_data, x + half_w, y + half_h, half_w, half_h, threshold);
+    } else {
+        new_node->avg = 0;
     }
 
-    RGB64 avg = root->sum / (pixel64_t)(width * height);
-
-    RGB avg8 = avg.from_64_to_8();
-    RGB mode = get_mode(root->branches);
-
-    // cout << "Average: " << (int)avg8.r << " " << (int)avg8.g << " " << (int)avg8.b << endl;
-    // cout << "Mode: " << (int)mode.r << " " << (int)mode.g << " " << (int)mode.b << endl;
-
-    if(mode - avg8 < BASE_CMPR_FACTOR) {
-        cout << "In compression..." << endl;
-        root->avg = pixel_from_rgb(mode);
-
-        for(int i = 0; i < BRANCHES_N; i++) {
-            delete root->branches[i];
-
-            root->branches[i] = NULL;
-        }
-    }
-
-    return root;
+    return new_node;
 }

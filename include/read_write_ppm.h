@@ -10,6 +10,7 @@
 #define PX_DATA_STRLEN 20
 
 image_t read_ppm(std::string filepath);
+void write_ppm(std::string filepath, std::vector<pixel_t> pixel_data, int width, int height, int max_px);
 
 pixel_t pixel_from_rgb(byte_t r, byte_t g, byte_t b);
 pixel_t pixel_from_rgb(RGB rgb);
