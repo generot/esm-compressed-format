@@ -32,7 +32,7 @@ pixel_t mean_squared_error(pixel_t *data, int x, int y, int width, int height, i
             pixel_t g_sq = (forecast.g - curr_px.g) * (forecast.g - curr_px.g);
             pixel_t b_sq = (forecast.b - curr_px.b) * (forecast.b - curr_px.b);
 
-            mean = mean + r_sq + g_sq + b_sq;
+            mean += r_sq + g_sq + b_sq;
         }
     }
 
