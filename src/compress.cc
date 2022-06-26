@@ -69,7 +69,7 @@ vector<pixel_t> decompress_img2(quadtree_node_t *regions, size_t sz, int width, 
 }
 
 //TUKA TRJABVA DA PAZIM I ORIGINALNITE RAZMERI!!!
-quadtree_t *compress_img2(image_t img_data, int x, int y, int width, int height, int threshold) {
+quadtree_t *compress_img2(image_t img_data, int x, int y, int width, int height, pixel_t threshold) {
     int half_w = width / 2;
     int half_h = height / 2;
 
@@ -80,15 +80,15 @@ quadtree_t *compress_img2(image_t img_data, int x, int y, int width, int height,
 
     new_node->avg = pixel_from_rgb(curr_region);
     new_node->region = combine_into_64(x, y, width, height);
-    
+
     if(mean_sq_err > threshold) {
         //cout << "Region is not divisible" << endl;
+        new_node->avg = 0;
+
         new_node->branches[0] = compress_img2(img_data, x, y, half_w, half_h, threshold);
         new_node->branches[1] = compress_img2(img_data, x + half_w, y, half_w, half_h, threshold);
         new_node->branches[2] = compress_img2(img_data, x, y + half_h, half_w, half_h, threshold);
         new_node->branches[3] = compress_img2(img_data, x + half_w, y + half_h, half_w, half_h, threshold);
-    } else {
-        new_node->avg = 0;
     }
 
     return new_node;

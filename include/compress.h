@@ -19,7 +19,7 @@ struct quadtree_node_t {
 };
 
 quadtree_t *compress_img(image_t img_data, int x, int y, int width, int height);
-quadtree_t *compress_img2(image_t img_data, int x, int y, int width, int height, int threshold);
+quadtree_t *compress_img2(image_t img_data, int x, int y, int width, int height, pixel_t threshold);
 
 void decompress_img(std::vector<pixel_t> qtree, size_t ix, int x, int y, int width, int height, pixel_t *out);
 std::vector<pixel_t> decompress_img2(quadtree_node_t *regions, size_t sz, int width, int height);
